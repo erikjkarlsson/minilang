@@ -52,7 +52,7 @@ static inline Value *make_func(Function *f);
 static inline void free_value(Value *v);
 static inline void free_ast(ASTNode *node);
 
-
+#define LAMBDA_CHAR "λ"
 
 /* The core interpreter function. */
 Value *eval(ASTNode *node, Env *env);
@@ -768,7 +768,7 @@ char* print_node(ASTNode* node) {
         case NODE_IF: {
             result_size += 100;
             result = (char*)realloc(result, result_size);
-            sprintf(result, "if %s\nthen %s\nelse %s",
+            sprintf(result, "if %s then %s else %s",
                    print_node(node->ifexpr.cond),
                    print_node(node->ifexpr.then_expr),
                    print_node(node->ifexpr.else_expr));
@@ -788,7 +788,8 @@ char* print_node(ASTNode* node) {
         case NODE_LAMBDA: {
             result_size += 60;
             result = (char*)realloc(result, result_size);
-            sprintf(result, "𝝺%s. %s",
+            sprintf(result, "%s%s.%s",
+                    LAMBDA_CHAR,
                    node->lambda.param,
                    print_node(node->lambda.body));
             break;

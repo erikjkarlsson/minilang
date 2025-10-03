@@ -4,6 +4,39 @@ MLN - MiniLaNg
 A interpreter / REPL for a tiny functional programming language implemented in
 Flex and Bison (C).
 
+
+```mln
+(λx.x(1))(λy.1 + y)
+(λx.(x)(1))(λy.1 + y)
+=> 2
+
+(λx.λy.x+y)(1)(2)
+=> 3
+
+# Pass itself as argument to allow for recursion
+const f := λg.λy.
+    if (y <= 1)
+    then 1
+    else (y * g(g)(y - 1))
+=> 𝝺g.λy.if y <= 1 then 1 else y * ((g)(g))(y - 1)
+# Define factorial
+const fact := f(f)
+=> 𝝺y.if y <= 1 then 1 else y * ((g)(g))(y - 1)
+fact(10)
+=> 3628800
+
+(\x.\y.\z.x+y/z)(1)(2)(3)
+(((λx.λy.λz.x + y / z)(1))(2))(3)
+=> 1.67
+
+```
+
+
+
+
+
+
+
 Features
 --------
 
@@ -133,23 +166,23 @@ in x + y + z
 ```mln
 # Lambda expressions
 
-\x -> x + 1
+\x. x + 1
 # => <function>
 
-\x -> \y -> x + y
+\x. \y. x + y
 # => <function>
 
 # Function application
 
-(\x -> x * 2)(5)
+(\x. x * 2)(5)
 # => 10
 
-(\x -> \y -> x + y)(1)(2)
+(\x. \y. x + y)(1)(2)
 # => 3
 
 # Higher-order functions
 
-let    f := \x -> \y -> x + y
+let    f := \x. \y. x + y
 in let g := f(5)
     in g(3)
 # => 8
@@ -157,7 +190,7 @@ in let g := f(5)
 # Recursive functions
 
 # Example: Factorial
-let f := \g -> \n ->
+let f := \g. \n.
    if (n <= 1)
    then 1
    else n * g(g)(n - 1)
@@ -287,7 +320,7 @@ Todo:
 ### (Working) Fibonacci Sequence
 
 ```mln
-let iter := \f -> \n ->
+let iter := \f. \n.
     if n <= 1
     then n
     else f(f)(n - 1) + f(f)(n - 2)
@@ -301,13 +334,13 @@ let iter := \f -> \n ->
 
 ```mln
 # Map function
-let iter := \g -> \f -> \list ->
+let iter := \g. \f. \list.
   if list == [] then []
   else [f(head(list))] + iter(g)(f)(tail(list))
 in let map := iter(iter)
-   in map(\x -> x * 2)([1 2 3])
+   in map(\x. x * 2)([1 2 3])
 
-let double := \x -> x * 2
+let double := \x. x * 2
 in map(double)([1, 2, 3, 4])
 # => [2, 4, 6, 8]
 ```
@@ -317,12 +350,12 @@ in map(double)([1, 2, 3, 4])
 ```mln
 # Area of circle
 const PI := 3.14159
-let circle_area := \radius -> PI * radius * radius
+let circle_area := \radius. PI * radius * radius
 in circle_area(5)
 # => 78.53975
 
 # Quadratic formula
-let quadratic := \a -> \b -> \c ->
+let quadratic := \a. \b. \c.
   let discriminant := b * b - 4 * a * c
   in if discriminant < 0
      then "No real roots"
@@ -414,7 +447,10 @@ Todo
 ----
 
 Planned features for future versions:
-
+ 
+ - [ ] Encode lambda terms as numbers instead of
+       as their string value as expressions like
+       `\x.\x.x+x` becomes meaningless.
  - [ ] List and array data structures
 
  - [ ] Haskell like pattern matching
