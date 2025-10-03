@@ -4,20 +4,20 @@ SRC_D := src
 
 all:  $(BIN)
 
-$(SRC_D)/calc.tab.c $(SRC_D)/calc.tab.h: $(SRC_D)/calc.y
-	cd src && bison -Wconflicts-sr -Wcounterexamples -t -v -d calc.y
+$(SRC_D)/ml.tab.c $(SRC_D)/ml.tab.h: $(SRC_D)/ml.y
+	cd src && bison -Wconflicts-sr -Wcounterexamples -t -v -d ml.y
 
-$(SRC_D)/lex.yy.c: $(SRC_D)/calc.l $(SRC_D)/calc.tab.h
-	cd src &&	flex calc.l
+$(SRC_D)/lex.yy.c: $(SRC_D)/ml.l $(SRC_D)/ml.tab.h
+	cd src &&	flex ml.l
 
-$(BIN): $(SRC_D)/lex.yy.c $(SRC_D)/calc.tab.c $(SRC_D)/calc.tab.h $(SRC_D)/env.c
-	cd src && gcc -o calc lex.yy.c env.c calc.tab.c && mv calc ../$(BIN)
+$(BIN): $(SRC_D)/lex.yy.c $(SRC_D)/ml.tab.c $(SRC_D)/ml.tab.h $(SRC_D)/env.c
+	cd src && gcc -o ml lex.yy.c env.c ml.tab.c && mv ml ../$(BIN)
 	chmod +x $(BIN)
 
 clean:
 	rm $(BIN)
-	rm $(SRC_D)/calc.tab.c $(SRC_D)/lex.yy.c $(SRC_D)/calc.tab.h
-	rm $(SRC_D)/calc.output
+	rm $(SRC_D)/ml.tab.c $(SRC_D)/lex.yy.c $(SRC_D)/ml.tab.h
+	rm $(SRC_D)/ml.output
 
-test: calc
+test: $(BIN)
 	./$(BIN) < $(UNITTESTS)

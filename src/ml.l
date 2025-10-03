@@ -1,4 +1,4 @@
-/* @file calc.l
+/* @file ml.l
  * @brief lexer
  */
 
@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "calc.tab.h"
+#include "ml.tab.h"
 
 static char *dupstr(const char *s) { return s ? strdup(s) : NULL; }
 
@@ -123,6 +123,6 @@ COMMENT     #.*
 
  /* Error handling */
 .               { fprintf(stderr, "Lexical error at line %d: unexpected character '%c'\n",
-                          yylineno,  yytext[0]); }
+                    yylineno,  yytext[0]); }
 
 %%

@@ -24,8 +24,8 @@
 \**************************************************************************/
 
 /* Standard header guard to prevent multiple inclusions. */
-#ifndef CALC_H
-#define CALC_H
+#ifndef ML_H
+#define ML_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -287,4 +287,4 @@ static inline Value *dup_value(const Value *v) {
     return nv;
 }
 
-#endif // CALC_H
+#endif // ML_H
