@@ -40,6 +40,9 @@
 #include "ml.h" // Defines ASTNode, Value, etc.
 #include "env.h"  /* Defines the environment for variable storage. */
 
+#include "fileutils.h" // Defines ASTNode, Value, etc.
+#include "stringlib.h" // Defines ASTNode, Value, etc.
+
 static inline char *dupstr(const char *s);
 static inline Value *dup_value(const Value *v);
 static inline ASTNode *make_node(NodeType t);
@@ -131,7 +134,7 @@ static Env *global_env = NULL;
  */
 %destructor { free($$); } T_STR T_SYM T_NAME T_ID
 %destructor { free_ast($$); } <node>
-%destructor { free_value($$); } <value>
+//                       %destructor { free_value($$); } <value>
 
 /* The starting rule for the grammar. */
 %start program
@@ -711,7 +714,7 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
 // Function to convert an AST node to its code string representation
 char* print_node(ASTNode* node) {
     if (!node) return strdup("");
-
+    char *tmp;
     char* result = NULL;
     size_t result_size = 0;
 
@@ -819,23 +822,49 @@ char* print_node(ASTNode* node) {
         }
 
         case NODE_CONST:
-            result_size += strlen(node->cdef.value) + 10;
+            tmp = print_node(node->cdef.value);
+            result_size += strlen(tmp) + 10;
             result = (char*)realloc(result, result_size);
-            sprintf(result, "%s", node->cdef.value);
+            sprintf(result, "%s", tmp);
             break;
+
         case NODE_MVAR:
-            result_size += strlen(node->vdef.value) + 10;
+            tmp = print_node(node->vdef.value);
+
+            result_size += strlen(tmp) + 10;
             result = (char*)realloc(result, result_size);
-            sprintf(result, "%s", node->vdef.value);
+            sprintf(result, "%s", tmp);
             break;
         default:
             result_size += 20;
             result = (char*)realloc(result, result_size);
-            sprintf(result, "<unknown_node_%d>", node->type);
+            sprintf(result, "<unknown %d>", node->type);
             break;
     }
 
     return result;
+}
+
+int parse_file(char **filename, Env *env)
+{
+    FILE* file_ptr;
+    bool is_running = true;
+
+    file_ptr =  fopen(*filename, "r");
+
+    if (file_ptr == NULL) {
+        printf(STR_FILE_LOAD_ERROR, filename);
+        return 1;
+    }
+    yyin = file_ptr; /* Point the lexer to the file. */
+    do {
+        yyparse();
+    } while (is_running && !feof(yyin));
+
+
+file_close:
+    fclose(file_ptr);
+    return 0;
 }
 
 /**
