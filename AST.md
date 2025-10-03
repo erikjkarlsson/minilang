@@ -258,10 +258,6 @@ Function ::= (param: String, param_type: String?, ret_type: String?,
  - `NODE_SEQ`: A sequence of expressions.
    * `elist`: `ExprList*` (a linked list of expressions to evaluate in order).
 
-Operational Semantics
----------------------
-
-
 We define the evaluation rules using the judgment `E |- e ↓ v`, which reads: "In
 environment `E`, expression `e` evaluates to value `v`".
 
