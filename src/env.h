@@ -21,20 +21,17 @@
 \**************************************************************************/
 
 #include "ml.h"
-
 #ifndef ENV_H
 #define ENV_H
 
-#include <stdbool.h>
 
+#include <stdbool.h>
+#include "stdio.h"
 
 struct Value;
 struct Env;
-
 typedef struct Value Value;
 typedef struct Env Env;
-
-
 /**
  * @brief Represents a single name-to-value binding in a scope.
  */
@@ -74,7 +71,7 @@ static void env_cleanup_bindings(Env *e);
 * @param parent A parent enironment
 **/
 
- Env *new_env(Env *parent);
+Env *new_env(Env *parent);
 
 /**
  * @brief Frees an environment. If ref_count is 0, it cleans up all resources.
@@ -92,7 +89,7 @@ static void env_cleanup_bindings(Env *e);
 /**
  * @brief Get a variable from environment.
  **/
- Value *env_get(Env *env, char *name);
+Value *env_get(Env *env, char *name);
 
 /**
  * @brief Set a variable to a value in the environment

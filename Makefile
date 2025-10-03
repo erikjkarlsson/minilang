@@ -15,9 +15,10 @@ $(BIN): $(SRC_D)/lex.yy.c $(SRC_D)/ml.tab.c $(SRC_D)/ml.tab.h $(SRC_D)/env.c
 	chmod +x $(BIN)
 
 clean:
-	rm $(BIN)
+
 	rm $(SRC_D)/ml.tab.c $(SRC_D)/lex.yy.c $(SRC_D)/ml.tab.h
 	rm $(SRC_D)/ml.output
+	rm $(BIN)
 
 test: $(BIN)
 	./$(BIN) < $(UNITTESTS)

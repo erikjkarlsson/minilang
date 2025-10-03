@@ -41,20 +41,26 @@
 #include "env.h"  /* Defines the environment for variable storage. */
 
 /* Forward declarations of helper functions defined in the C section below. */
-ASTNode *make_node(NodeType t);
-Value *make_int(int x);
-Value *make_float(double x);
-Value *make_bool(bool b);
-Value *make_unit();
-Value *make_string(const char *s);
-Value *make_func(Function *f);
+static inline char *dupstr(const char *s);
+static inline Value *dup_value(const Value *v);
+static inline ASTNode *make_node(NodeType t);
+static inline Value *make_int(int x);
+static inline Value *make_float(double x);
+static inline Value *make_bool(bool b);
+static inline Value *make_unit();
+static inline Value *make_string(const char *s);
+static inline Value *make_func(Function *f);
+static inline void free_value(Value *v);
+static inline void free_ast(ASTNode *node);
+
+
+
+
 
 /* The core interpreter function. */
 Value *eval(ASTNode *node, Env *env);
 
 /* Memory management functions. */
-void free_value(Value *v);
-void free_ast(ASTNode *node);
 void yylex_destroy();
 
 /* Global environment to store top-level bindings. */
@@ -62,33 +68,6 @@ static Env *global_env = NULL;
 
 /* --- String Macros for Output and Errors --- */
 
-/* Display strings for different value types. */
-#define STR_SHOW_TRUE   "true"
-#define STR_SHOW_FALSE  "false"
-#define STR_SHOW_INT    "=> %d\n"
-#define STR_SHOW_FLOAT  "=> %.6g\n"
-#define STR_SHOW_BOOL   "=> %s\n"
-#define STR_SHOW_STRING "=> \"%s\"\n"
-#define STR_SHOW_FUNC   "=> <function>\n"
-#define STR_SHOW_UNIT   "\n" /* Unit type prints nothing. */
-
-/* Error message strings. */
-#define STR_ERR_NON_BOOL_NOT      "Line %d: Error: NOT requires a boolean operand\n"
-#define STR_ERR_IF_NON_BOOL       "Line %d: Error: IF condition must be a boolean\n"
-#define STR_NON_FUN_CALL          "Line %d: Error: Attempted to call a non-function value\n"
-#define STR_BIN_OP_TYPE_ERR       "Line %d: Error: Type mismatch in binary operation\n"
-#define STR_ERR_UNKNOWN_AST_TYPE  "Line %d: Error: Unknown AST node type\n"
-#define STR_ERR_MALLOC_CONC       "Fatal: malloc failed in string concat\n"
-#define STR_ERR_DIV_ZERO          "Line %d: Error: Division by zero\n"
-#define STR_ERR_MOD_ZERO          "Line %d: Error: Modulo by zero\n"
-#define STR_UNARY_MINUS           "Line %d: Error: Unary minus requires a numeric operand\n"
-#define STR_CALLOC_FAIL           "Line %d: Fatal, calloc failed in make_node\n"
-#define STR_PARSE_ERR             "Line %d: Parse error: %s\n"
-
-/* General strings. */
-#define STR_GOODBYE             "Goodbye!\n"
-#define STR_FILE_LOAD_ERROR     "Error loading file %s"
-#define BANNER                  "Type 'quit' or 'exit' to leave.\n\n"
 
 %}
 
@@ -439,72 +418,7 @@ expr_seq:
  * ----------------------------------------------------------------------------
  */
 
-/**
- * @brief Creates a new ASTNode of a given type.
- * @param t The NodeType for the new node.
- * @return A pointer to the newly allocated and initialized ASTNode.
- */
-ASTNode *make_node(NodeType t)
-{
-    ASTNode *n = calloc(1, sizeof(ASTNode));
-    if (!n) {
-        fprintf(stderr, STR_CALLOC_FAIL, yylineno);
-        exit(EXIT_FAILURE);
-    }
-    n->type = t;
-    n->lineno = yylineno; // Store the line number for error reporting.
-    return n;
-}
 
-
-/*
- * ----------------------------------------------------------------------------
- * VALUE CONSTRUCTORS
- * ----------------------------------------------------------------------------
- * These functions create `Value` structs for the interpreter. They handle
- * memory allocation and initialization for different data types.
- */
-
-Value *make_int(int x) {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_INT;
-    v->ival = x;
-    return v;
-}
-
-Value *make_float(double x) {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_FLOAT;
-    v->fval = x;
-    return v;
-}
-
-Value *make_bool(bool b) {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_BOOL;
-    v->bval = b;
-    return v;
-}
-
-Value *make_unit() {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_UNIT;
-    return v;
-}
-
-Value *make_string(const char *s) {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_STRING;
-    v->sval = strdup(s); /* Use strdup for safety. */
-    return v;
-}
-
-Value *make_func(Function *f) {
-    Value *v = malloc(sizeof(Value));
-    v->type = VAL_FUNC;
-    v->func = f;
-    return v;
-}
 
 /*
  * ----------------------------------------------------------------------------
@@ -793,109 +707,6 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
  * MEMORY MANAGEMENT
  * ----------------------------------------------------------------------------
  */
-
-/**
- * @brief Frees a Value struct and any heap-allocated data it contains.
- * @param v The Value to free.
- */
-void free_value(Value *v) {
-    if (!v) return;
-
-    switch (v->type) {
-        case VAL_STRING:
-            free(v->sval);
-            break;
-        case VAL_FUNC:
-            if (v->func) {
-                free(v->func->param);
-                free(v->func->param_type);
-                free(v->func->ret_type);
-                /* The function's body (ASTNode) and environment are owned by other *
-                 * parts of the program (AST or parent environments) and are not    *
-                 * freed here to prevent double-freeing.                            */
-                free(v->func);
-            }
-            break;
-        default:
-            /* Other types (INT, FLOAT, BOOL, UNIT) don't have nested allocations. */
-            break;
-    }
-    free(v);
-}
-
-/**
- * @brief Recursively frees an entire Abstract Syntax Tree.
- * @param node The root of the AST (or sub-tree) to free.
- */
-void free_ast(ASTNode *node) {
-    if (!node) return;
-
-    switch(node->type) {
-        case NODE_VAL:
-            free_value(node->val);
-            break;
-        case NODE_VAR:
-            free(node->var);
-            break;
-        case NODE_UNOP:
-            free_ast(node->unop.operand);
-            break;
-        case NODE_BINOP:
-            free_ast(node->binop.left);
-            free_ast(node->binop.right);
-            break;
-        case NODE_IF:
-            free_ast(node->ifexpr.cond);
-            free_ast(node->ifexpr.then_expr);
-            free_ast(node->ifexpr.else_expr);
-            break;
-        case NODE_LET:
-            free(node->let.name);
-            free_ast(node->let.value);
-            free_ast(node->let.body);
-            break;
-        case NODE_ASSIGN:
-            free(node->assign.name);
-            free_ast(node->assign.value);
-            break;
-        case NODE_CONST:
-            free(node->cdef.name);
-            free(node->cdef.type_name);
-            free_ast(node->cdef.value);
-            break;
-        case NODE_MVAR:
-            free(node->vdef.name);
-            free(node->vdef.type_name);
-            free_ast(node->vdef.value);
-            break;
-        case NODE_LAMBDA:
-            free(node->lambda.param);
-            free(node->lambda.param_type);
-            free(node->lambda.ret_type);
-            /* The lambda body's ownership is transferred to the Function struct
-             * when it is evaluated. The AST of the body is freed when the
-             * function object is eventually garbage collected or the program ends.
-             * So we DO NOT free it here. free_ast(node->lambda.body); */
-            break;
-        case NODE_CALL:
-            free_ast(node->call.fn);
-            free_ast(node->call.arg);
-            break;
-        case NODE_SEQ: {
-            ExprList *curr = node->seq.elist;
-            while (curr) {
-                ExprList *next = curr->next;
-                free_ast(curr->expr);
-                free(curr);
-                curr = next;
-            }
-            break;
-        }
-        default:
-            break;
-    }
-    free(node);
-}
 
 /*
  * ----------------------------------------------------------------------------

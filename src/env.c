@@ -20,10 +20,15 @@
  *                                                                        *
 \**************************************************************************/
 
-#include "env.h"
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "ml.h"
+#include "env.h"
 
-extern void free_value(Value *v);
+
+
 extern int yylineno;
 
 /* Environment Reference Counting Helpers */
@@ -118,7 +123,7 @@ void env_set(Env *env, char *name, Value *val, bool is_const) {
         fprintf(stderr, "env_set: env is NULL\n");
         exit(EXIT_FAILURE);
     }
-    
+
     Binding *b = malloc(sizeof(Binding));
     if (!b) {
         fprintf(stderr, "Line %d: Fatal, malloc failed for '%s' in env_set\n", yylineno, name);
@@ -132,7 +137,7 @@ void env_set(Env *env, char *name, Value *val, bool is_const) {
         free(b);
         exit(EXIT_FAILURE);
     }
-    
+
     b->val = val;
     b->is_const = is_const;
     b->next = env->bindings;
