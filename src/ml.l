@@ -105,8 +105,8 @@ COMMENT     #.*
 "->"            { return T_ARROW; }
 "::"            { return T_TYPE; }
 ":"             { return T_COLON; }
-"\\"            { return T_LAMBDA; }
-
+"\\"|"𝝺"        { return T_LAMBDA; }
+"."             { return T_DOT; }
 
  /* Delimiters */
 "("             { return T_LEFT; }

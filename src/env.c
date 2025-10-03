@@ -20,10 +20,15 @@
  *                                                                        *
 \**************************************************************************/
 
-#include "env.h"
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "ml.h"
+#include "env.h"
 
-extern void free_value(Value *v);
+
+
 extern int yylineno;
 
 /* Environment Reference Counting Helpers */
@@ -77,6 +82,7 @@ static void env_cleanup_bindings(Env *e) {
 
     e->bindings = NULL;
     free(e);
+    e = NULL;
 }
 
 /* ---------- Environment Implementation ---------- */
@@ -118,7 +124,7 @@ void env_set(Env *env, char *name, Value *val, bool is_const) {
         fprintf(stderr, "env_set: env is NULL\n");
         exit(EXIT_FAILURE);
     }
-    
+
     Binding *b = malloc(sizeof(Binding));
     if (!b) {
         fprintf(stderr, "Line %d: Fatal, malloc failed for '%s' in env_set\n", yylineno, name);
@@ -130,9 +136,10 @@ void env_set(Env *env, char *name, Value *val, bool is_const) {
     if (!b->name) {
         fprintf(stderr, "Line %d: Fatal, strdup failed for '%s' in env_set\n", yylineno, name);
         free(b);
+        b = NULL;
         exit(EXIT_FAILURE);
     }
-    
+
     b->val = val;
     b->is_const = is_const;
     b->next = env->bindings;
@@ -164,6 +171,7 @@ void env_update(Env *env, char *name, Value *val) {
                 }
                 if (b->val) {
                     free_value(b->val);
+                    b->val = NULL;
                 }
                 b->val = val;
                 return;
