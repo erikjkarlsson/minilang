@@ -3,13 +3,11 @@ const y := 123
 const z := 10
 
 # Addition
-
 x + y - z
 x * z
 x + y + z
 x + z
 x + y
-
 (z + z + z + z) + 0 + 0 + 1
 x + x + x - (x + x + x)
 y - x - y + x
@@ -66,7 +64,7 @@ z % 2
 
 # => 0
 
-
+(\x -> \y -> x + y)(1)(2)
 
 
 

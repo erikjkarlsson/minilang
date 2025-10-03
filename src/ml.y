@@ -124,10 +124,11 @@ static Env *global_env = NULL;
 %token T_FUN T_ARROW T_TYPE T_COLON
 %token T_AND T_OR T_NOT
 %token T_EQ T_NEQ T_LT T_GT T_LTE T_GTE
-%token T_CONST T_DO T_END
+%token T_MVAR T_CONST T_DO T_END
 %token T_SEMICOLON T_COMMA
 %token T_NEWLINE T_QUIT
 %token T_LAMBDA
+
 
 /* --- Operator Precedence and Associativity (from lowest to highest) --- */
 %right T_SET                      /* Assignment */
@@ -143,7 +144,7 @@ static Env *global_env = NULL;
 /* Associates non-terminal grammar rules with a type from the %union. */
 %type<node> program statement expr primary term factor
 %type<node> if_expr let_expr lambda_expr block_expr
-%type<node> assignment const_def
+%type<node> assignment mvar_def const_def
 %type<name> opt_ret_type
 %type<elist> stmt_list expr_seq
 
@@ -219,6 +220,7 @@ statement:
     | expr T_SEMICOLON    { $$ = $1; }   /* An expression followed by a semicolon. */
     | assignment T_NEWLINE { $$ = $1; }
     | const_def T_NEWLINE  { $$ = $1; }
+    | mvar_def T_NEWLINE  { $$ = $1; }
     | T_QUIT T_NEWLINE    {
         printf(STR_GOODBYE);
         free_env(global_env, true); /* Free the global environment. */
@@ -375,6 +377,23 @@ const_def:
         $$->cdef.name = $2;
         $$->cdef.type_name = NULL;
         $$->cdef.value = $4;
+    }
+;
+/* A constant definition. `const pi = 3.14` */
+mvar_def:
+    /* With optional type annotation */
+    T_MVAR T_SYM T_COLON T_SYM T_SET expr {
+        $$ = make_node(NODE_MVAR);
+        $$->vdef.name = $2;
+        $$->vdef.type_name = $4;
+        $$->vdef.value = $6;
+    }
+    /* Without type annotation */
+    | T_MVAR T_SYM T_SET expr {
+        $$ = make_node(NODE_MVAR);
+        $$->vdef.name = $2;
+        $$->vdef.type_name = NULL;
+        $$->vdef.value = $4;
     }
 ;
 
@@ -603,6 +622,13 @@ Value *eval(ASTNode *node, Env *env) {
             if (!val) return make_unit();
 
             env_set(env, node->cdef.name, val, true); /* Set as constant. */
+            return dup_value(val);
+        }
+        case NODE_MVAR: {
+            Value *val = eval(node->vdef.value, env);
+            if (!val) return make_unit();
+
+            env_set(env, node->vdef.name, val, true); /* Set as constant. */
             return dup_value(val);
         }
 
@@ -836,6 +862,11 @@ void free_ast(ASTNode *node) {
             free(node->cdef.name);
             free(node->cdef.type_name);
             free_ast(node->cdef.value);
+            break;
+        case NODE_MVAR:
+            free(node->vdef.name);
+            free(node->vdef.type_name);
+            free_ast(node->vdef.value);
             break;
         case NODE_LAMBDA:
             free(node->lambda.param);

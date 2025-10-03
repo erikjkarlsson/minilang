@@ -156,6 +156,7 @@ typedef enum {
     NODE_LET,     /* A let-in binding expression */
     NODE_ASSIGN,  /* A variable assignment */
     NODE_CONST,   /* A constant definition */
+    NODE_MVAR,   /* A mutable variable definition */
     NODE_SEQ      /* A sequence of expressions */
 } NodeType;
 
@@ -199,6 +200,9 @@ struct ASTNode {
 
         /* For NODE_CONST: A constant definition. */
         struct { char *name; char *type_name; ASTNode *value; } cdef;
+
+        /* For NODE_CONST: A constant definition. */
+        struct { char *name; char *type_name; ASTNode *value; } vdef;
 
         /* For NODE_SEQ: A sequence of expressions. */
         struct { ExprList *elist; } seq;

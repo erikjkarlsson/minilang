@@ -1,12 +1,10 @@
 # tests.calc – regression tests for calc
-
 # ---- Literals ----
 123
 3.14
 "hello"
 T
 F
-
 # ---- Arithmetic ----
 1 + 2
 2 * 3 + 4
@@ -15,7 +13,6 @@ F
 10 % 3
 3.5 + 1.5
 5 - 7
-
 # ---- Comparison ----
 1 == 1
 1 != 2
@@ -23,20 +20,16 @@ F
 5 > 2
 4 <= 4
 6 >= 7
-
 # ---- Logic ----
 T and F
 T or F
 not F
 # Constants
-
 const a : int := 42
 a
 a + 10
-
 const b : float := 2.5
 b * 2.0
-
 # ---- Let binding (scoping) ----
 let x := 5 in x + 2
 # Nesting
