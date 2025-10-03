@@ -25,9 +25,7 @@
 extern void free_value(Value *v);
 extern int yylineno;
 
-/* -------------------------------------------------------------------------- */
-/* Environment Reference Counting Helpers (NEW)                               */
-/* -------------------------------------------------------------------------- */
+/* Environment Reference Counting Helpers */
 
 /**
  * @brief Increases the reference count of an environment.
@@ -67,6 +65,8 @@ void env_release(Env *env) {
 static void env_cleanup_bindings(Env *e) {
     if (!e) return;
 
+    Env *parent = e->parent;
+    e->parent = NULL;
     Binding *b = e->bindings;
     while (b) {
         Binding *nxt = b->next;
@@ -79,11 +79,12 @@ static void env_cleanup_bindings(Env *e) {
         free(b);
         b = nxt;
     }
+
     e->bindings = NULL;
+
+    // Now safe to free current
     free(e);
 }
-
-
 /* ---------- Environment Implementation ---------- */
 Env *new_env(Env *parent) {
 
@@ -96,7 +97,7 @@ Env *new_env(Env *parent) {
     }
     e->parent = parent;
     e->bindings = NULL;
-    e->ref_count = 1; // <--- MODIFIED: Start with a ref count of 1
+    e->ref_count = 1;
     return e;
 }
 

@@ -1,5 +1,5 @@
 /* @file calc.l
- * @brief Fixed lexer
+ * @brief lexer
  */
 
 /**************************************************************************\
@@ -104,7 +104,7 @@ COMMENT     #.*
 "->"            { return T_ARROW; }
 "::"            { return T_TYPE; }
 ":"             { return T_COLON; }
-"\\"            { return T_LAMBDA; } /* <-- NEW */
+"\\"            { return T_LAMBDA; }
 
 
  /* Delimiters */

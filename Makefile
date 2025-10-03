@@ -5,7 +5,7 @@ SRC_D := src
 all:  $(BIN)
 
 $(SRC_D)/calc.tab.c $(SRC_D)/calc.tab.h: $(SRC_D)/calc.y
-	cd src && bison -Wconflicts-sr -t -v -d calc.y
+	cd src && bison -Wconflicts-sr -Wcounterexamples -t -v -d calc.y
 
 $(SRC_D)/lex.yy.c: $(SRC_D)/calc.l $(SRC_D)/calc.tab.h
 	cd src &&	flex calc.l

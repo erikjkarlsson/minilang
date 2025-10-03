@@ -274,7 +274,7 @@ static inline Value *dup_value(const Value *v) {
             nf->body = of->body; /* Share the pointer to the AST body. */
             nf->env = of->env;   /* Share the pointer to the closure environment. */
 
-        env_retain(nf->env); // <<< ADD THIS LINE
+        env_retain(nf->env);
 
             nv->func = nf;
             break;
