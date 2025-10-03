@@ -79,6 +79,7 @@ COMMENT     #.*
 "in"            { return T_IN; }
 "fun"           { return T_FUN; }
 "const"         { return T_CONST; }
+"var"         { return T_MVAR; }
 "do"            { return T_DO; }
 "end"           { return T_END; }
 "T"          { return T_TRUE; }
