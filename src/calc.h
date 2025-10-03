@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include "env.h"
 
 /* Forward Declarations */
 
@@ -112,34 +113,18 @@ struct Value {
 };
 
 
-/*
- * ============================================================================
- * Environment for Variable Bindings (Symbol Table)
- * ============================================================================
- */
-
-/**
- * @brief Represents a single name-to-value binding in a scope.
- */
-
-typedef struct Binding {
-    char *name;              /* The name of the variable. */
-    Value *val;              /* The value it is bound to. */
-    bool is_const;           /* A flag to indicate if the binding is immutable. */
-    struct Binding *next;    /* Pointer to the next binding in the same scope. */
-} Binding;
-
 /**
  * @brief Represents an environment (or scope).
  *
  * Environments are chained together via the `parent` pointer to create nested
  * scopes, enabling lexical scoping.
  */
-struct Env {
-    Binding *bindings;  /* A linked list of bindings in this scope. */
-    Env *parent;        /* A pointer to the enclosing (parent) scope. */
-};
 
+struct Env {
+    struct Binding *bindings;  /* A linked list of bindings in this scope. */
+    struct Env *parent;        /* A pointer to the enclosing (parent) scope. */
+    int ref_count;
+};
 
 /*
  * ============================================================================
@@ -285,8 +270,12 @@ static inline Value *dup_value(const Value *v) {
             nf->param = dupstr(of->param);
             nf->param_type = dupstr(of->param_type);
             nf->ret_type = dupstr(of->ret_type);
+
             nf->body = of->body; /* Share the pointer to the AST body. */
             nf->env = of->env;   /* Share the pointer to the closure environment. */
+
+        env_retain(nf->env); // <<< ADD THIS LINE
+
             nv->func = nf;
             break;
         }
