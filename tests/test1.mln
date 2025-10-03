@@ -38,15 +38,14 @@ let x := 10 in (let y := x * 2 in y + 1)
 let x := 1 in (let x := 2 in x) + x
 
 # ---- Functions ----
-let add := (\x -> x + 1) in add(1)
+let add := (\x . x + 1) in add(1)
 
-const square := (\x -> x * x)
+var square := (\x . x * x)
 square(10)
-# (fun id(x : int) -> int in id(99))
 
 # ---- Lambda ----
-(\x -> x + 1)(5)
-(\x -> ( \y -> x + y)(2))(3)
+(\x . x + 1)(5)
+(\x . ( \y . x + y)(2))(3)
 
 # ---- If / then / else ----
 if T then 1 else 0
@@ -56,3 +55,4 @@ if (3 < 4) then 100 else 200
 a + "foo"          # type mismatch
 unknownVar + 1     # undefined symbol
 1 / 0              # division by zero (if supported)
+quit

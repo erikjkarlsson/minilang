@@ -40,7 +40,6 @@
 #include "ml.h" // Defines ASTNode, Value, etc.
 #include "env.h"  /* Defines the environment for variable storage. */
 
-/* Forward declarations of helper functions defined in the C section below. */
 static inline char *dupstr(const char *s);
 static inline Value *dup_value(const Value *v);
 static inline ASTNode *make_node(NodeType t);
@@ -52,8 +51,6 @@ static inline Value *make_string(const char *s);
 static inline Value *make_func(Function *f);
 static inline void free_value(Value *v);
 static inline void free_ast(ASTNode *node);
-
-
 
 
 
@@ -100,7 +97,7 @@ static Env *global_env = NULL;
 %token T_TRUE T_FALSE
 %token T_IF T_THEN T_ELSE
 %token T_LET T_IN T_SET
-%token T_FUN T_ARROW T_TYPE T_COLON
+%token T_FUN T_DOT T_ARROW T_TYPE T_COLON
 %token T_AND T_OR T_NOT
 %token T_EQ T_NEQ T_LT T_GT T_LTE T_GTE
 %token T_MVAR T_CONST T_DO T_END
@@ -134,6 +131,7 @@ static Env *global_env = NULL;
  */
 %destructor { free($$); } T_STR T_SYM T_NAME T_ID
 %destructor { free_ast($$); } <node>
+%destructor { free_value($$); } <value>
 
 /* The starting rule for the grammar. */
 %start program
@@ -165,28 +163,15 @@ program:
         if ($2) {
             /* Evaluate the AST in the global environment. */
             Value *v = eval($2, global_env);
-
-            /* If evaluation produced a result... */
-            if (v) {
-                /* Print the result based on its type. */
-                switch(v->type) {
-                    case VAL_INT:    printf(STR_SHOW_INT, v->ival); break;
-                    case VAL_FLOAT:  printf(STR_SHOW_FLOAT, v->fval); break;
-                    case VAL_BOOL:
-                        printf(STR_SHOW_BOOL,
-                               v->bval ? STR_SHOW_TRUE : STR_SHOW_FALSE);
-                        break;
-                    case VAL_STRING: printf(STR_SHOW_STRING, v->sval); break;
-                    case VAL_FUNC:   printf(STR_SHOW_FUNC); break;
-                    case VAL_UNIT:   /* Print nothing for unit type */ break;
-                }
-                /* Free the resulting value from the evaluation. */
-                free_value(v);
+            printf("%s ", print_node($2));
+            show_value("\n=> %s\n", v);
+            /* Free the resulting value from the evaluation. */
+            free_value(v);
             }
-            /* Free the AST for the statement now that we're done with it. */
-            free_ast($2);
+           /* Free the AST for the statement now that we're done with it. */
+           free_ast($2);
         }
-    }
+
 ;
 
 /*
@@ -195,11 +180,11 @@ program:
  */
 statement:
     T_NEWLINE             { $$ = NULL; } /* An empty line is a valid statement. */
-    | expr T_NEWLINE      { $$ = $1; }   /* An expression followed by a newline. */
-    | expr T_SEMICOLON    { $$ = $1; }   /* An expression followed by a semicolon. */
-    | assignment T_NEWLINE { $$ = $1; }
-    | const_def T_NEWLINE  { $$ = $1; }
-    | mvar_def T_NEWLINE  { $$ = $1; }
+    | expr T_NEWLINE      { $$ = $1; print_node($1);}   /* An expression followed by a newline. */
+    | expr T_SEMICOLON    { $$ = $1; print_node($1);}   /* An expression followed by a semicolon. */
+    | assignment T_NEWLINE { $$ = $1; print_node($1); }
+    | const_def T_NEWLINE  { $$ = $1; print_node($1);}
+    | mvar_def T_NEWLINE  { $$ = $1; print_node($1);}
     | T_QUIT T_NEWLINE    {
         printf(STR_GOODBYE);
         free_env(global_env, true); /* Free the global environment. */
@@ -305,7 +290,7 @@ let_expr:
  * A lambda (anonymous function) expression. `lambda x -> x + 1`
  */
 lambda_expr:
-    T_LAMBDA T_SYM maybe_newline T_ARROW maybe_newline expr {
+    T_LAMBDA T_SYM maybe_newline T_DOT maybe_newline expr {
         $$ = make_node(NODE_LAMBDA);
         $$->lambda.param = $2;
         $$->lambda.param_type = NULL; /* Type annotations are optional */
@@ -462,6 +447,7 @@ Value *eval(ASTNode *node, Env *env) {
                     retval = make_bool(!v->bval);
                 } else {
                     fprintf(stderr, STR_ERR_NON_BOOL_NOT, node->lineno);
+                BACKTRACE(&g_trace_stack);
                     retval = make_unit();
                 }
             } else if (node->unop.op == T_MINUS) { /* Unary minus */
@@ -471,6 +457,7 @@ Value *eval(ASTNode *node, Env *env) {
                     retval = make_float(-v->fval);
                 } else {
                     fprintf(stderr, STR_UNARY_MINUS, node->lineno);
+                    BACKTRACE(&g_trace_stack);
                     retval = make_unit();
                 }
             }
@@ -494,6 +481,7 @@ Value *eval(ASTNode *node, Env *env) {
             if (c->type != VAL_BOOL) {
                 fprintf(stderr, STR_ERR_IF_NON_BOOL, node->lineno);
                 free_value(c);
+                BACKTRACE(&g_trace_stack);
                 return make_unit();
             }
 
@@ -567,7 +555,9 @@ Value *eval(ASTNode *node, Env *env) {
 
             if (fn_val->type != VAL_FUNC) {
                 fprintf(stderr, STR_NON_FUN_CALL, node->lineno);
+
                 free_value(fn_val);
+                BACKTRACE(&g_trace_stack);
                 return make_unit();
             }
 
@@ -605,6 +595,7 @@ Value *eval(ASTNode *node, Env *env) {
 
         default:
             fprintf(stderr, STR_ERR_UNKNOWN_AST_TYPE, node->lineno);
+            BACKTRACE(&g_trace_stack);
             return make_unit();
     }
 }
@@ -625,6 +616,7 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
 {
     if (!l || !r) {
         fprintf(stderr, STR_BIN_OP_TYPE_ERR, node->lineno);
+        BACKTRACE(&g_trace_stack);
         return make_unit();
     }
 
@@ -663,6 +655,7 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
             case T_DIVIDE:
                 if (rf == 0.0) {
                     fprintf(stderr, STR_ERR_DIV_ZERO, node->lineno);
+                    BACKTRACE(&g_trace_stack);
                     return make_unit();
                 }
                 /* Division of two ints might produce a float, so we always promote. */
@@ -673,6 +666,7 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
             case T_MOD:
                 if (rf == 0.0) {
                     fprintf(stderr, STR_ERR_MOD_ZERO, node->lineno);
+                    BACKTRACE(&g_trace_stack);
                     return make_unit();
                 }
                 /* Modulo is defined for integers. */
@@ -698,6 +692,7 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
 
     /* If none of the above conditions matched, it's a type error. */
     fprintf(stderr, STR_BIN_OP_TYPE_ERR, node->lineno);
+    BACKTRACE(&g_trace_stack);
     return make_unit();
 }
 
@@ -713,6 +708,134 @@ Value *eval_binop(ASTNode *node, Env *env, Value *l, Value *r)
  * MAIN PROGRAM AND ERROR HANDLING
  * ----------------------------------------------------------------------------
  */
+// Function to convert an AST node to its code string representation
+char* print_node(ASTNode* node) {
+    if (!node) return strdup("");
+
+    char* result = NULL;
+    size_t result_size = 0;
+
+    switch (node->type) {
+        case NODE_VAL:
+            result_size += 50;
+            result = (char *)realloc(result, result_size);
+            print_value(node->val, dbgbuf, DBGBUF_SIZE);
+            sprintf(result, "%s", dbgbuf);
+            break;
+
+        case NODE_VAR:
+            result_size += strlen(node->var) + 10;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "%s", node->var);
+            break;
+
+        case NODE_UNOP: {
+            result_size += 20;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "%s ",
+                   node->unop.op == T_MINUS ? "-" :
+                   node->unop.op == T_NOT ? "not " : "unknown_op");
+            break;
+        }
+
+        case NODE_BINOP: {
+            result_size += 30;
+            result = (char*)realloc(result, result_size);
+            const char* op = NULL;
+            switch (node->binop.op) {
+                case T_PLUS: op = "+"; break;
+                case T_MINUS: op = "-"; break;
+                case T_MULTIPLY: op = "*"; break;
+                case T_DIVIDE: op = "/"; break;
+                case T_MOD: op = "%"; break;
+                case T_EQ: op = "=="; break;
+                case T_NEQ: op = "!="; break;
+                case T_LT: op = "<"; break;
+                case T_GT: op = ">"; break;
+                case T_LTE: op = "<="; break;
+                case T_GTE: op = ">="; break;
+                case T_AND: op = "and"; break;
+                case T_OR: op = "or"; break;
+                default: op = "?"; break;
+            }
+            sprintf(result, "%s %s %s",
+                   print_node(node->binop.left),
+                   op,
+                   print_node(node->binop.right));
+            break;
+        }
+
+        case NODE_IF: {
+            result_size += 100;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "if %s\nthen %s\nelse %s",
+                   print_node(node->ifexpr.cond),
+                   print_node(node->ifexpr.then_expr),
+                   print_node(node->ifexpr.else_expr));
+            break;
+        }
+
+        case NODE_LET: {
+            result_size += 80;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "let %s := %s\nin  %s",
+                   node->let.name,
+                   print_node(node->let.value),
+                   print_node(node->let.body));
+            break;
+        }
+
+        case NODE_LAMBDA: {
+            result_size += 60;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "𝝺%s. %s",
+                   node->lambda.param,
+                   print_node(node->lambda.body));
+            break;
+        }
+
+        case NODE_CALL: {
+            result_size += 40;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "(%s)(%s)",
+                   print_node(node->call.fn),
+                   print_node(node->call.arg));
+            break;
+        }
+
+        case NODE_SEQ: {
+            result_size += 200;
+            result = (char*)realloc(result, result_size);
+            ExprList* it = node->seq.elist;
+            strcpy(result, "{ ");
+            while (it) {
+                strcat(result, print_node(it->expr));
+                if (it->next) strcat(result, "; ");
+                it = it->next;
+            }
+            strcat(result, " }");
+            break;
+        }
+
+        case NODE_CONST:
+            result_size += strlen(node->cdef.value) + 10;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "%s", node->cdef.value);
+            break;
+        case NODE_MVAR:
+            result_size += strlen(node->vdef.value) + 10;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "%s", node->vdef.value);
+            break;
+        default:
+            result_size += 20;
+            result = (char*)realloc(result, result_size);
+            sprintf(result, "<unknown_node_%d>", node->type);
+            break;
+    }
+
+    return result;
+}
 
 /**
  * @brief The main entry point for the interpreter.
@@ -743,6 +866,7 @@ int main(int argc, char **argv)
     else {
         printf(BANNER);
         yyin = stdin; /* Point the lexer to standard input. */
+
         do {
             fflush(stdout);
             yyparse();
@@ -761,4 +885,5 @@ int main(int argc, char **argv)
  */
 void yyerror(const char* s) {
     fprintf(stderr, STR_PARSE_ERR, yylineno, s);
+    BACKTRACE(&g_trace_stack);
 }

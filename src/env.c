@@ -82,6 +82,7 @@ static void env_cleanup_bindings(Env *e) {
 
     e->bindings = NULL;
     free(e);
+    e = NULL;
 }
 
 /* ---------- Environment Implementation ---------- */
@@ -135,6 +136,7 @@ void env_set(Env *env, char *name, Value *val, bool is_const) {
     if (!b->name) {
         fprintf(stderr, "Line %d: Fatal, strdup failed for '%s' in env_set\n", yylineno, name);
         free(b);
+        b = NULL;
         exit(EXIT_FAILURE);
     }
 
@@ -169,6 +171,7 @@ void env_update(Env *env, char *name, Value *val) {
                 }
                 if (b->val) {
                     free_value(b->val);
+                    b->val = NULL;
                 }
                 b->val = val;
                 return;
